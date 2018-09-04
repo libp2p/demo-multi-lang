@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/multiformats/go-multihash"
 	"github.com/libp2p/go-floodsub"
@@ -18,34 +19,63 @@ import (
 	_ "github.com/ipfs/go-ipfs-addr"
 )
 
-var f_bootstrap bool
 const bootstrapHostname string = "libp2p-bootstrap.goelzer.io"
 
 func usage() {
-	fmt.Printf("Usage: %s [OPTIONS]\n\n", os.Args[1]);
+	fmt.Printf("Usage: %s [OPTIONS]\n\n", os.Args[0]);
 	fmt.Printf("  --bootstrapper   Start a DHT; initial peer only.\n");
 	fmt.Printf("  --peer=IP        Connect to IP to join the libp2p swarm\n");
 	fmt.Printf("  --port=N         Listen and connect on N\n");
 	fmt.Printf("  --help           Display this message\n");
 	fmt.Printf("Note that --bootstrapper and --peer are mutually exclusive.\n");
-	fmt.Printf("\nThis program demonstrates a libp2p swarm.  The first node");
-	fmt.Printf("is started with `--bootstrapper`.  Add a second node with");
-	fmt.Printf("`--peer=IP_OF_FIRST_NODE`.");
+	fmt.Printf("\nThis program demonstrates a libp2p swarm. The first node\n");
+	fmt.Printf("is started with `--bootstrapper`.  Add a second node with\n");
+	fmt.Printf("`--peer=IP_OF_FIRST_NODE`.\n\n");
+}
+
+func printMutuallyExclusiveErrorAndDie() {
+	fmt.Printf("Error: --bootstrapper and --peer are mutually exclusive\n\n");
+	os.Exit(1);
+}
+
+func parseArgs(isBootstrap *bool, peerAddrStr *string) {
+	*isBootstrap = false;
+	*peerAddrStr = "";
+
+	for _,arg := range os.Args[1:] {
+		if (arg == "--help") {
+			// --help = print usage and die
+			usage();
+			os.Exit(1);
+		} else if (arg == "--bootstrapper") {
+			// Bootstrap mode '--bootstrapper' => we create a DHT
+			if (*peerAddrStr != "") {
+				printMutuallyExclusiveErrorAndDie();
+			}
+			*isBootstrap = true;
+		} else if (strings.HasPrefix(arg,"--peer=")) {
+			// Peer mode:  won't create a DHT but instead connect to peer IP
+			if (*isBootstrap == true) {
+				printMutuallyExclusiveErrorAndDie();
+			}
+			*peerAddrStr = arg[7:];
+		} else {
+			fmt.Printf("Invalid argument: '%s'\n\n",arg);
+			os.Exit(1);
+		}
+	}
 }
 
 func main() {
-	usage(); os.Exit(1);
-	//
-	// Bootstrap mode '--bootstrap' => we create a DHT
-	// Else:  we connect to an existing DHT at known location
-	//
-	arg := os.Args[1]
-	if (arg=="--bootstrap") {
-		f_bootstrap = true;
+	var isBootstrap bool;
+	var peerAddrStr string;
+	parseArgs(&isBootstrap, &peerAddrStr);
+
+	if (isBootstrap) {
+		fmt.Println("Bootstrap Mode");
 	} else {
-		f_bootstrap = false;
+		fmt.Printf("Peer Mode (peer address = '%s')\n",peerAddrStr);
 	}
-	fmt.Println("f_bootstrap = %d", f_bootstrap)
 
 	ctx := context.Background()
 
