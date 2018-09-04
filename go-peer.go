@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 	"strings"
+	"net"
 
 	"github.com/multiformats/go-multihash"
 	"github.com/libp2p/go-floodsub"
@@ -24,8 +25,8 @@ const bootstrapHostname string = "libp2p-bootstrap.goelzer.io"
 func usage() {
 	fmt.Printf("Usage: %s [OPTIONS]\n\n", os.Args[0]);
 	fmt.Printf("  --bootstrapper   Start a DHT; initial peer only.\n");
-	fmt.Printf("  --peer=IP        Connect to IP to join the libp2p swarm\n");
-	fmt.Printf("  --port=N         Listen and connect on N\n");
+	fmt.Printf("  --peer=HOST      Connect to IP to join the libp2p swarm\n");
+	//fmt.Printf("  --port=N         Listen and connect on N\n");
 	fmt.Printf("  --help           Display this message\n");
 	fmt.Printf("Note that --bootstrapper and --peer are mutually exclusive.\n");
 	fmt.Printf("\nThis program demonstrates a libp2p swarm. The first node\n");
@@ -66,6 +67,15 @@ func parseArgs(isBootstrap *bool, peerAddrStr *string) {
 	}
 }
 
+func hostToIpStr(hostname string) string {
+	IPAddr, err := net.ResolveIPAddr("ip", hostname)
+	if err != nil {
+		fmt.Println("Unable to resolve '%s'", hostname)
+		os.Exit(1)
+	}
+	return IPAddr.String()
+}
+
 func main() {
 	var isBootstrap bool;
 	var peerAddrStr string;
@@ -74,7 +84,10 @@ func main() {
 	if (isBootstrap) {
 		fmt.Println("Bootstrap Mode");
 	} else {
-		fmt.Printf("Peer Mode (peer address = '%s')\n",peerAddrStr);
+		s := peerAddrStr;
+		peerAddrStr = hostToIpStr(s);
+		fmt.Printf("Peer Mode (peer address = '%s' ('%s')\n",s,peerAddrStr);
+
 	}
 
 	ctx := context.Background()
