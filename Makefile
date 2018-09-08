@@ -1,4 +1,4 @@
-SRC		= go-peer.go
+SRC		= dht-interop.go
 BIN		= $(SRC:.go=)
 DHT_SERVER 	= libp2p-bootstrap.goelzer.io
 
@@ -7,4 +7,4 @@ all: $(SRC)
 
 install:
 	scp $(SRC:.go=) $(DHT_SERVER):~/
-	ssh $(DHT_SERVER) ./$(BIN) --bootstrap
+	ssh $(DHT_SERVER) ./$(BIN)
