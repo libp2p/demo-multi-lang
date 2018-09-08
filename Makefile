@@ -6,5 +6,6 @@ all: $(SRC)
 	go build -o $(BIN) $(SRC)
 
 install:
+	-ssh $(DHT_SERVER) killall -9 dht-interop
 	scp $(SRC:.go=) $(DHT_SERVER):~/
 	ssh $(DHT_SERVER) ./$(BIN)
