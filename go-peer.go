@@ -81,31 +81,20 @@ func main() {
 	var peerAddrStr string;
 	parseArgs(&isBootstrap, &peerAddrStr);
 
-	if (isBootstrap) {
-		fmt.Println("Bootstrap Mode");
-	} else {
-		s := peerAddrStr;
-		peerAddrStr = hostToIpStr(s);
-		fmt.Printf("Peer Mode (peer address = '%s' ('%s')\n",s,peerAddrStr);
-
-	}
-
 	ctx := context.Background()
 
 	//
 	// Set up a libp2p host.
 	//
-	host, err := libp2p.New(ctx, libp2p.Defaults)
+	host, err := libp2p.New(ctx, libp2p.Defaults, libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/5555") )
 	if err != nil {
 		fmt.Println("libp2p.New:  failed:  %v",err)
 		panic(err)
 	}
-	// TODO:  get my own public IP instead of assuming 159.89.221.55 (IP of libp2p-bootstrap.goelzer.io)
-	fmt.Println("My adress:  /ip4/159.89.221.55/tcp/5555/ipfs/%s", host.ID().Pretty() )
+	//fmt.Println("My adress:  /ip4/159.89.221.55/tcp/5555/ipfs/%s", host.ID().Pretty() )
 
-	// TODO:  rename to PubSubTopicName
-	TopicName := "libp2p-go-js-rust-chat"
-	_ = TopicName
+	PubSubTopicName := "libp2p-go-js-rust-chat"
+	_ = PubSubTopicName //TODO
 
 	//
 	// Construct ourselves a pubsub instance using that libp2p host.
@@ -115,17 +104,50 @@ func main() {
 		panic(err)
 	}
 
-	_ = fsub
+	_ = fsub //TODO
+
 
 	//
-	// Construct a DHT for discovery.
+	// Construct a DHT for discovery (client only for peer mode)
 	//
-	dht, err := dht.New(ctx, host, dhtopts.Client(false) )
-	if err != nil {
-		panic(err)
+	var Dht *dht.IpfsDHT;
+	if (isBootstrap) {
+		fmt.Println("Bootstrap Mode");
+		var err error
+		Dht, err = dht.New(ctx, host, dhtopts.Client(false) )
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Success:  host id '%s'",host.ID().Pretty() );
+	} else {
+		s := peerAddrStr;
+		peerAddrStr = hostToIpStr(s);
+		fmt.Printf("Peer Mode (peer address = '%s' ('%s')\n",s,peerAddrStr);
+		var err error
+		Dht, err = dht.New(ctx, host, dhtopts.Client(true) )
+		if err != nil {
+			panic(err)
+		}
+
+		bootstrapPeers := []string{
+			//TODO:  this is wrong; need to know bootstrap host's pretty ID,
+			// not the pretty ID of ourselves!
+			fmt.Sprintf("/ip4/159.89.221.55/tcp/5555/ipfs/%s", host.ID().Pretty()),
+		}
+		fmt.Println("bootstrapping...")
+		for _, addr := range bootstrapPeers {
+			iaddr, _ := ipfsaddr.ParseString(addr)
+
+			pinfo, _ := peerstore.InfoFromP2pAddr(iaddr.Multiaddr())
+
+			if err := host.Connect(ctx, *pinfo); err != nil {
+				fmt.Println("bootstrapping to peer failed: ", err)
+			}
+		}
 	}
 
-	_ = dht
+	_ = Dht
+
 
 // These are the IPFS bootstrap nodes:
 //
@@ -155,12 +177,12 @@ func main() {
 //	}
 
 	// Using the sha256 of our "topic" as our rendezvous value
-	c, _ := cid.NewPrefixV1(cid.Raw, multihash.SHA2_256).Sum([]byte(TopicName))
+	c, _ := cid.NewPrefixV1(cid.Raw, multihash.SHA2_256).Sum([]byte(PubSubTopicName))
 
 	// First, announce ourselves as participating in this topic
 	fmt.Println("announcing ourselves...")
 	tctx, _ := context.WithTimeout(ctx, time.Second*10)
-	if err := dht.Provide(tctx, c, true); err != nil {
+	if err := Dht.Provide(tctx, c, true); err != nil {
 		panic(err)
 	}
 
@@ -188,7 +210,7 @@ func main() {
 //
 //	fmt.Println("bootstrapping and discovery complete!")
 //
-	sub, err := fsub.Subscribe(TopicName)
+	sub, err := fsub.Subscribe(PubSubTopicName)
 	if err != nil {
 		panic(err)
 	}
@@ -209,7 +231,7 @@ func main() {
 	fmt.Println("Type something and hit enter to send:")
 	scan := bufio.NewScanner(os.Stdin)
 	for scan.Scan() {
-		if err := fsub.Publish(TopicName, scan.Bytes()); err != nil {
+		if err := fsub.Publish(PubSubTopicName, scan.Bytes()); err != nil {
 			panic(err)
 		}
 	}
