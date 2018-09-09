@@ -70,7 +70,7 @@ func main() {
 	// Read the private key
 	//
 	var privBytes []byte
-	privBytes, err := ioutil.ReadFile("util/private_key.bin")
+	privBytes, err := ioutil.ReadFile("../util/private_key.bin")
 	if err != nil {
 		fmt.Println("ioutil.ReadFile:  failed:  %v", err)
 		panic(err)
