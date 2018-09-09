@@ -1,3 +1,9 @@
+
+
+util/private-key-gen -> private_key.bin (marshalled private key that is used for stable peer id of bootstrap server)
+
+
+
 0.  Help me fix node "Error: Cannot find module 'libp2p'"
 Answer:
   cd js-dht-test
