@@ -63,14 +63,37 @@ func handleConn(conn net.Conn) {
 	}
 }
 
+func parseArgs() (bool, string) {
+	usage := fmt.Sprintf("Usage: %s [-b] [PRIVATE_KEY]\n\n-b is bootstrap mode (creates DHT)\nPRIVATE_KEY is the path to a private key like '../util/private_key.bin'\n", os.Args[0])
+	var bBootstrap bool = false
+	var privKeyFilePath string
+	var args []string = os.Args[1:]
+	if (len(args) == 0) || (len(args) > 2) {
+		fmt.Printf("Error: wrong number of arguments\n\n%s", usage)
+		os.Exit(1)
+	}
+	if args[0] == "-b" {
+		bBootstrap = true
+		args = args[1:]
+	}
+	privKeyFilePath = args[0]
+	return bBootstrap, privKeyFilePath
+}
+
 func main() {
 	ctx := context.Background()
+
+	bBootstrap, privKeyFilePath := parseArgs()
+	if !bBootstrap {
+		fmt.Printf("Error: bootstrap mode required in this example")
+		os.Exit(1)
+	}
 
 	//
 	// Read the private key
 	//
 	var privBytes []byte
-	privBytes, err := ioutil.ReadFile("../util/private_key.bin")
+	privBytes, err := ioutil.ReadFile(privKeyFilePath)
 	if err != nil {
 		fmt.Println("ioutil.ReadFile:  failed:  %v", err)
 		panic(err)
