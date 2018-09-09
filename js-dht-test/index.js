@@ -5,11 +5,14 @@ const TCP = require('libp2p-tcp')
 const Mplex = require('libp2p-mplex')
 const SECIO = require('libp2p-secio')
 const PeerInfo = require('peer-info')
+const FloodSub = require('libp2p-floodsub')
 const CID = require('cids')
 const KadDHT = require('libp2p-kad-dht')
 const defaultsDeep = require('@nodeutils/defaults-deep')
 const waterfall = require('async/waterfall')
 const parallel = require('async/parallel')
+
+var fsub;
 
 class MyBundle extends libp2p {
   constructor (_options) {
@@ -64,9 +67,35 @@ parallel([
     (cb) => node1.dial(bootstrapAddr, cb),
     // Set up of the cons might take time
     (cb) => setTimeout(cb, 300)
-  ], (err) => {
-    if (err) { throw err }
+  ], (err) => { if (err) { throw err }
 
+
+  
+    console.log("My ID:  " + node1.peerInfo.id._idB58String)
+
+    fsub = new FloodSub(node1)
+    console.log("Initialized fsub\n")
+    fsub.start((err) => {
+      if (err) {
+        console.log('Error:', err)
+      }
+      fsub.on('libp2p-demo-chat', (data) => {
+        console.log(">>> Got some data:")
+        console.log("  From:     " + data.from);
+        console.log("  Data:     " + data.data);
+        console.log("  SeqNo:    " + data.seqno);
+        console.log("  topicIDs: " + data.topicIDs);
+        console.log(">>> END - data\n")
+      })
+      fsub.subscribe('libp2p-demo-chat')
+    
+      fsub.publish('libp2p-demo-chat', new Buffer('Hello from JS (0)'))
+    })
+
+
+
+    
+       /*
     const provideCid = new CID('QmTp9VkYvnHyrqKQuFPiuZkiX9gPcqj6x5LJ1rmWuSySnL')
     const findCid = new CID('zb2rhXqLbdjpXnJG99QsjM6Nc6xaDKgEr2FfugDJynE7H2NR6')
 
@@ -91,6 +120,17 @@ parallel([
           }
         })
       }, 5000)
-    })
+    })*/
+       
   })
 })
+
+
+var i = 0
+function pubsubloop() {
+    i = i + 1
+    var s = new Buffer('Hello from JS ('+i+')')
+    fsub.publish('libp2p-demo-chat',s)
+}
+
+setInterval(pubsubloop,10000);
