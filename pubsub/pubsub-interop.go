@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 
 	//	ipfsaddr "github.com/ipfs/go-ipfs-addr"
-	"github.com/libp2p/go-libp2p"
+	libp2p "github.com/libp2p/go-libp2p"
+	host "github.com/libp2p/go-libp2p-host"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
 
 	"github.com/libp2p/go-libp2p-crypto"
@@ -18,6 +20,7 @@ import (
 
 //var ho h.Host
 //var dhtPtr *dht.IpfsDHT
+var TopicName string = "libp2p-demo-chat"
 
 func parseArgs() (bool, string) {
 	usage := fmt.Sprintf("Usage: %s [-b] [PRIVATE_KEY]\n\n-b is bootstrap mode (creates DHT)\nPRIVATE_KEY is the path to a private key like '../util/private_key.bin'\n", os.Args[0])
@@ -46,7 +49,7 @@ func main() {
 	} else {
 		fmt.Printf("peer mode")
 	}
-	fmt.Printf(" with private key '%s'", privKeyFilePath)
+	fmt.Printf(" with private key '%s'\n", privKeyFilePath)
 
 	//
 	// Read the private key
@@ -68,10 +71,17 @@ func main() {
 	//
 	// Construct our libp2p host
 	//
-	host, err := libp2p.New(ctx,
-		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9876"),
-		libp2p.Identity(priv),
-	)
+	var host host.Host
+	if bBootstrap {
+		host, err = libp2p.New(ctx,
+			libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9876"),
+			libp2p.Identity(priv),
+		)
+	} else {
+		host, err = libp2p.New(ctx,
+			libp2p.Identity(priv),
+		)
+	}
 	if err != nil {
 		fmt.Println("libp2p.New:  failed:  %v", err)
 		panic(err)
@@ -99,7 +109,7 @@ func main() {
 		var bootstrapMultiAddr ma.Multiaddr
 		var pinfo *peerstore.PeerInfo
 		bootstrapMultiAddrStr := fmt.Sprintf("/ip4/%s/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa", bootstrapAddrIP4Str)
-		fmt.Println("bootstrapping to '%s'...", bootstrapMultiAddrStr)
+		fmt.Printf("bootstrapping to '%s'...\n", bootstrapMultiAddrStr)
 		bootstrapMultiAddr, err := ma.NewMultiaddr(bootstrapMultiAddrStr)
 		if err != nil {
 			fmt.Println("Error (ma.NewMultiaddr): %v", err)
@@ -117,8 +127,42 @@ func main() {
 		}
 	}
 
-	_ = fsub
+	//
+	// Subscribe to the topic and wait for messages published on that topic
+	//
+	sub, err := fsub.Subscribe(TopicName)
+	if err != nil {
+		fmt.Println("Error (fsub.Subscribe): %v", err)
+		panic(err)
+	}
 
+	// Go and listen for messages from them, and print them to the screen
+	go func() {
+		for {
+			msg, err := sub.Next(ctx)
+			if err != nil {
+				fmt.Println("Error (sub.Next): %v", err)
+				panic(err)
+			}
+
+			fmt.Printf("%s: %s\n", msg.GetFrom(), string(msg.GetData()))
+		}
+	}()
+
+	if bBootstrap {
+		fmt.Println("Bootstrapper running.  Ctrl+C to exit.")
+		for true {
+		}
+	} else {
+		// Now, wait for input from the user, and send that out!
+		fmt.Println("Type something and hit enter to send to other subscribers:")
+		scan := bufio.NewScanner(os.Stdin)
+		for scan.Scan() {
+			if err := fsub.Publish(TopicName, scan.Bytes()); err != nil {
+				panic(err)
+			}
+		}
+	}
 	// 	//
 	// 	// Construct a DHT for peer discovery if we are the bootstrap node.
 	// 	// Else:  construct a DHT client for peer discovery and connect to bootstrap node.
