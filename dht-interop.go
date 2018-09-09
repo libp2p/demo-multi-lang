@@ -17,49 +17,48 @@ import (
 	"github.com/libp2p/go-libp2p-crypto"
 )
 
-var ho h.Host
-var dhtPtr *dht.IpfsDHT
+func createConnHandler(dhtPtr *dht.IpfsDHT, ho h.Host) func(conn net.Conn) {
+	return func(conn net.Conn) {
+		ctx := context.Background()
 
-func handleConn(conn net.Conn) {
-	ctx := context.Background()
+		d := *dhtPtr
 
-	d := *dhtPtr
+		provideCid, err := cid.Decode("zb2rhXqLbdjpXnJG99QsjM6Nc6xaDKgEr2FfugDJynE7H2NR6")
+		if err != nil {
+			panic(err)
+		}
+		findCid, err := cid.Decode("QmTp9VkYvnHyrqKQuFPiuZkiX9gPcqj6x5LJ1rmWuSySnL")
+		if err != nil {
+			panic(err)
+		}
 
-	provideCid, err := cid.Decode("zb2rhXqLbdjpXnJG99QsjM6Nc6xaDKgEr2FfugDJynE7H2NR6")
-	if err != nil {
-		panic(err)
-	}
-	findCid, err := cid.Decode("QmTp9VkYvnHyrqKQuFPiuZkiX9gPcqj6x5LJ1rmWuSySnL")
-	if err != nil {
-		panic(err)
-	}
-
-	time.Sleep(5 * time.Second)
-
-	// First, announce ourselves as participating in this topic
-	fmt.Println("announcing ourselves...")
-	tctx, _ := context.WithTimeout(ctx, time.Second*10)
-	if err := d.Provide(tctx, provideCid, true); err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("Local node %s is providing %s\n", ho.ID().Pretty(), provideCid)
-
-	// Now, look for others who have announced
-	fmt.Println("searching for other peers...")
-	tctx, _ = context.WithTimeout(ctx, time.Second*10)
-	providers, err := d.FindProviders(tctx, findCid)
-	if err != nil {
-		panic(err)
-	}
-
-	if len(providers) != 0 {
-		provider := providers[0]
-		fmt.Printf("Remote node %s is providing %s\n", provider.ID.Pretty(), findCid)
 		time.Sleep(5 * time.Second)
-		os.Exit(0)
-	} else {
-		fmt.Printf("no remote providers!\n")
+
+		// First, announce ourselves as participating in this topic
+		fmt.Println("announcing ourselves...")
+		tctx, _ := context.WithTimeout(ctx, time.Second*10)
+		if err := d.Provide(tctx, provideCid, true); err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("Local node %s is providing %s\n", ho.ID().Pretty(), provideCid)
+
+		// Now, look for others who have announced
+		fmt.Println("searching for other peers...")
+		tctx, _ = context.WithTimeout(ctx, time.Second*10)
+		providers, err := d.FindProviders(tctx, findCid)
+		if err != nil {
+			panic(err)
+		}
+
+		if len(providers) != 0 {
+			provider := providers[0]
+			fmt.Printf("Remote node %s is providing %s\n", provider.ID.Pretty(), findCid)
+			time.Sleep(5 * time.Second)
+			os.Exit(0)
+		} else {
+			fmt.Printf("no remote providers!\n")
+		}
 	}
 }
 
@@ -84,7 +83,7 @@ func main() {
 	}
 
 	//
-	// Set up a libp2p host.
+	// Set up a libp2p host listening on every interface
 	//
 	host, err := libp2p.New(ctx,
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9876"),
@@ -95,22 +94,21 @@ func main() {
 		panic(err)
 	}
 
-	host.Network().SetConnHandler(handleConn)
-
-	ho = host
-
-	fmt.Printf("To connect, run:\n")
-	fmt.Printf("node js-dht-test/index.js %s/ipfs/%s\n", host.Addrs()[0], host.ID().Pretty())
-
 	//
-	// Construct a DHT for discovery.
+	// Construct a DHT for discovery
 	//
-	d, err := dht.New(ctx, host, dhtopts.Client(false))
+	dhtPtr, err := dht.New(ctx, host, dhtopts.Client(false))
 	if err != nil {
 		panic(err)
 	}
 
-	dhtPtr = d
+	//
+	// Accept connections from peers
+	//
+	f := createConnHandler(dhtPtr, host)
+	host.Network().SetConnHandler(f)
+	fmt.Printf("To connect, run:\n")
+	fmt.Printf("node js-dht-test/index.js %s/ipfs/%s\n", host.Addrs()[0], host.ID().Pretty())
 
 	select {}
 }
