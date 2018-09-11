@@ -2,3 +2,4 @@ dht-interop
 pubsub-interop
 content-dht-provide-find/js-dht-test/node_modules/
 util/private-key-gen
+pubsub/js/node_modules

@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	_ "time"
 
 	//	ipfsaddr "github.com/ipfs/go-ipfs-addr"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
+	inet "github.com/libp2p/go-libp2p-net"
 	peerstore "github.com/libp2p/go-libp2p-peerstore"
 
 	"github.com/libp2p/go-libp2p-crypto"
@@ -18,8 +20,10 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-//var ho h.Host
+var ho host.Host
+
 //var dhtPtr *dht.IpfsDHT
+
 var TopicName string = "libp2p-demo-chat"
 
 func parseArgs() (bool, string) {
@@ -37,6 +41,14 @@ func parseArgs() (bool, string) {
 	}
 	privKeyFilePath = args[0]
 	return bBootstrap, privKeyFilePath
+}
+
+func handleConn(conn inet.Conn) {
+	ctx := context.Background()
+	h := ho
+	fmt.Printf("<NOTICE> Got connection from %v\n", conn.RemoteMultiaddr().String())
+	_ = h
+	_ = ctx
 }
 
 func main() {
@@ -148,6 +160,8 @@ func main() {
 			fmt.Printf("%s: %s\n", msg.GetFrom(), string(msg.GetData()))
 		}
 	}()
+
+	host.Network().SetConnHandler(handleConn)
 
 	if bBootstrap {
 		fmt.Println("Bootstrapper running.  Ctrl+C to exit.")

@@ -19,14 +19,10 @@ Note that the node ID of `dht-interop` is always `Qm...6aJ9oRuEzWa` because it i
 
 **Second terminal:**  run the command printed out by dht-interop, replacing 127.0.0.1 with the IP of the server where dht-interop is listening.  Example:
 
-First time only:
-```
-cd content-dht-provide-find/js-dht-test
-npm install
-```
-
 Running the Node.js program:
 ```
+cd content-dht-provide-find/js-dht-test
+npm install  # first time only
 node js-dht-test/index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
 
@@ -60,7 +56,8 @@ This peer, which is not in bootstrapper mode, creates a node, subscribes to the 
 **Third terminal**:  Create a JS peer to connect to bootstrap and publish on topic
 ```
 cd pubsub/js
-
+npm install  # first time only
+node index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
 
 _Acknowledgements:  @jhiesey for DHT (content & peer routing) JS+Go interop, @stebalien for PubSub_
