@@ -19,14 +19,10 @@ Note that the node ID of `dht-interop` is always `Qm...6aJ9oRuEzWa` because it i
 
 **Second terminal:**  run the command printed out by dht-interop, replacing 127.0.0.1 with the IP of the server where dht-interop is listening.  Example:
 
-First time only:
-```
-cd js-dht-test
-npm install
-```
-
 Running the Node.js program:
 ```
+cd content-dht-provide-find/js-dht-test
+npm install  # first time only
 node js-dht-test/index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
 
@@ -38,6 +34,35 @@ node js-dht-test/index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESp
 
 **What it demonstrates**:  Two Go nodes are created and run a chat server using a shared PubSub topic.  **TODO**:  Should be a Go node and a JS node, once I get the two Go nodes version working.
 
-TODO:  show how to run
+**First terminal**:  Create the bootstrapper node
+
+```
+cd pubsub
+./pubsub-interop -b ../util/private_key.bin.bootstrapper.Wa
+```
+
+The bootstrapper creates a new libp2p node, subscribes to the shared topic string, spawns a go routine to emit any publishes to that topic, and then waits forever.
+
+**Second terminal**:  Create a go peer to connect to bootstrapper and publish on the topic
+
+```
+cd pubsub
+./pubsub-interop ../util/private_key.bin.peer.Sk
+```
+
+This peer, which is not in bootstrapper mode, creates a node, subscribes to the shared topic string, spawns the same go routine, and then loops forever requesting user input and publishing each line to the topic.
+
+**Third terminal**:  Create a JS peer to connect to bootstrap and publish on topic
+```
+cd pubsub/js
+npm install  # first time only
+node index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
+```
+
+This JS peer will fire off a hello message every few seconds, which the other two subscribing nodes can see.
+
+If you return to the second terminal and type a message, the bootstrapper and JS peers will both print that message.
+
+In short, you have a chat app on a private libp2p network.
 
 _Acknowledgements:  @jhiesey for DHT (content & peer routing) JS+Go interop, @stebalien for PubSub_
