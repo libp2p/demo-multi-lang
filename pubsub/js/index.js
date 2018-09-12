@@ -12,8 +12,6 @@ const defaultsDeep = require('@nodeutils/defaults-deep')
 const waterfall = require('async/waterfall')
 const parallel = require('async/parallel')
 
-var fsub;
-
 class MyBundle extends libp2p {
   constructor(_options) {
     const defaults = {
@@ -21,17 +19,7 @@ class MyBundle extends libp2p {
         transport: [TCP],
         streamMuxer: [Mplex],
         connEncryption: [SECIO],
-        //        // we add the DHT module that will enable Peer and Content Routing
-        //        dht: KadDHT
       },
-      config: {
-        //        dht: {
-        //          kBucketSize: 20
-        //        },
-        //        EXPERIMENTAL: {
-        //          dht: true
-        //        }
-      }
     }
 
     super(defaultsDeep(_options, defaults))
@@ -53,8 +41,10 @@ function createNode(callback) {
   ], (err) => callback(err, node))
 }
 
-var node;
+let fsub;
+let node;
 const bootstrapAddr = process.argv[2];
+
 waterfall([
   (cb) => createNode(cb),
   (node_, cb) => {
@@ -84,8 +74,7 @@ waterfall([
 })
 
 
-var i = 0
-
+let i = 0
 function pubsubloop() {
   i = i + 1
   var s = new Buffer('Hello from JS (' + i + ')')
