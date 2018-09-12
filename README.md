@@ -52,12 +52,17 @@ cd pubsub
 
 This peer, which is not in bootstrapper mode, creates a node, subscribes to the shared topic string, spawns the same go routine, and then loops forever requesting user input and publishing each line to the topic.
 
-#TODO
 **Third terminal**:  Create a JS peer to connect to bootstrap and publish on topic
 ```
 cd pubsub/js
 npm install  # first time only
 node index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
+
+This JS peer will fire off a hello message every few seconds, which the other two subscribing nodes can see.
+
+If you return to the second terminal and type a message, the bootstrapper and JS peers will both print that message.
+
+In short, you have a chat app on a private libp2p network.
 
 _Acknowledgements:  @jhiesey for DHT (content & peer routing) JS+Go interop, @stebalien for PubSub_
