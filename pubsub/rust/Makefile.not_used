@@ -1,0 +1,8 @@
+SRC		= src/main.rs	
+BIN		= $(SRC:.rs=)
+
+all: $(SRC)
+	cargo build
+
+run:
+	RUST_BACKTRACE=1 cargo run
