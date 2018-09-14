@@ -23,7 +23,7 @@ Running the Node.js program:
 ```
 cd content-dht-provide-find/js-dht-test
 npm install  # first time only
-node js-dht-test/index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
+node js-dht-test/index.js /ip4/127.0.0.1/tcp/5555/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
 
 
@@ -33,6 +33,8 @@ node js-dht-test/index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESp
 **Directory**:  `pubsub`
 
 **What it demonstrates**:  Two Go peers, one JS peer, and one Rust peer are all created and run a chat server using a shared PubSub topic.  Typing text in any peer sends it to all the other peers.
+
+**Quick test**:  `cd pubsub` and then run `./test/test.sh`.  Requires Terminator (eg, `sudo apt-get install terminator`).  The rest of this section describes how to test manually.
 
 (**TODO**:  eliminate centralized bootstrapper; any peer should be able to bootstrap from any other peer and peers should be able to start in any order)
 
@@ -58,7 +60,7 @@ This peer, which is not in bootstrapper mode, creates a node, subscribes to the 
 ```
 cd pubsub/js
 npm install  # first time only
-node index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
+node index.js /ip4/127.0.0.1/tcp/5555/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
 
 This JS peer will fire off a hello message every few seconds, which the other two subscribing nodes can see.
@@ -67,13 +69,10 @@ This JS peer will fire off a hello message every few seconds, which the other tw
 
 ```
 cd pubsub/rust
-cargo run /ip4/0.0.0.0/tcp/9879
-# Wait for it to start up
-/dial /ip4/127.0.0.1/tcp/9876
-# Now type any message to publish
+cargo run
 ```
 
-The Rust peer listens on the CLI-specified port (9879 in the above example), and then the `/dial` command causes it to dial out to the boostrap host.  (TODO:  rust-libp2p#471)  It is now subscribed to the same topic as the other peers.
+The Rust peer starts up, listens on port 6002, and then dials the boostrap peer.  (TODO:  rust-libp2p#471)  It is now subscribed to the same topic as the other peers.
 
 If you return to the second, third or fourth terminals and type a message, the bootstrapper and the other 2 peers will all print your message.
 
