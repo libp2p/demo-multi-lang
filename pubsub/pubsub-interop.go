@@ -58,9 +58,9 @@ func main() {
 	bBootstrap, privKeyFilePath := parseArgs()
 	fmt.Printf("Starting up in ")
 	if bBootstrap {
-		fmt.Printf("bootstrapper mode")
+		fmt.Printf("bootstrapper mode (port 5555)")
 	} else {
-		fmt.Printf("peer mode")
+		fmt.Printf("peer mode (port 6000)")
 	}
 	fmt.Printf(" with private key '%s'\n", privKeyFilePath)
 
@@ -87,11 +87,12 @@ func main() {
 	var host host.Host
 	if bBootstrap {
 		host, err = libp2p.New(ctx,
-			libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/9876"),
+			libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/5555"),
 			libp2p.Identity(priv),
 		)
 	} else {
 		host, err = libp2p.New(ctx,
+			libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/6000"),
 			libp2p.Identity(priv),
 		)
 	}
@@ -121,7 +122,7 @@ func main() {
 	if !bBootstrap {
 		var bootstrapMultiAddr ma.Multiaddr
 		var pinfo *peerstore.PeerInfo
-		bootstrapMultiAddrStr := fmt.Sprintf("/ip4/%s/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa", bootstrapAddrIP4Str)
+		bootstrapMultiAddrStr := fmt.Sprintf("/ip4/%s/tcp/5555/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa", bootstrapAddrIP4Str)
 		fmt.Printf("bootstrapping to '%s'...\n", bootstrapMultiAddrStr)
 		bootstrapMultiAddr, err := ma.NewMultiaddr(bootstrapMultiAddrStr)
 		if err != nil {

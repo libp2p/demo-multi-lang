@@ -35,7 +35,7 @@ function createNode(callback) {
   waterfall([
     (cb) => PeerInfo.create(cb),
     (peerInfo, cb) => {
-      peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/0')
+      peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/0')  //TODO:  0 -> 6001 ?
       node = new MyBundle({
         peerInfo
       })

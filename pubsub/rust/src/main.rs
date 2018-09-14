@@ -39,10 +39,8 @@ use libp2p::websocket::WsConfig;
 fn main() {
     env_logger::init();
 
-    // Determine which address to listen to.
-    let listen_addr = env::args()
-        .nth(1)
-        .unwrap_or("/ip4/0.0.0.0/tcp/10050".to_owned());
+    // Address to listen on
+    let listen_addr:String = "/ip4/0.0.0.0/tcp/6002".to_owned();
 
     // We start by creating a `TcpConfig` that indicates that we want TCP/IP.
     let transport = TcpConfig::new()
@@ -120,6 +118,16 @@ fn main() {
         Ok(())
     });
 
+    let m:String = "/ip4/127.0.0.1/tcp/5555".to_owned();
+    let target: Multiaddr = m.parse().unwrap();
+    println!("Dialing bootstrap peer {}", target);
+    swarm_controller
+        .dial(
+             target,
+             transport.clone().with_upgrade(floodsub_upgrade.clone()),
+        )
+        .unwrap();
+
     let stdin = {
         let mut buffer = Vec::new();
         tokio_stdin::spawn_stdin_stream_unbounded().for_each(move |msg| {
@@ -129,21 +137,8 @@ fn main() {
             } else if buffer.is_empty() {
                 return Ok(());
             }
-
             let msg = String::from_utf8(mem::replace(&mut buffer, Vec::new())).unwrap();
-            if msg.starts_with("/dial ") {
-                let target: Multiaddr = msg[6..].parse().unwrap();
-                println!("*Dialing {}*", target);
-                swarm_controller
-                    .dial(
-                        target,
-                        transport.clone().with_upgrade(floodsub_upgrade.clone()),
-                    )
-                    .unwrap();
-            } else {
-                floodsub_ctl.publish(&topic, msg.into_bytes());
-            }
-
+            floodsub_ctl.publish(&topic, msg.into_bytes());
             Ok(())
         })
     };
