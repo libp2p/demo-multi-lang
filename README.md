@@ -32,7 +32,9 @@ node js-dht-test/index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESp
 
 **Directory**:  `pubsub`
 
-**What it demonstrates**:  Two Go nodes are created and run a chat server using a shared PubSub topic.  **TODO**:  Should be a Go node and a JS node, once I get the two Go nodes version working.
+**What it demonstrates**:  Two Go peers, one JS peer, and one Rust peer are all created and run a chat server using a shared PubSub topic.  Typing text in any peer sends it to all the other peers.
+
+(**TODO**:  eliminate centralized bootstrapper; any peer should be able to bootstrap from any other peer and peers should be able to start in any order)
 
 **First terminal**:  Create the bootstrapper node
 
@@ -61,8 +63,20 @@ node index.js /ip4/127.0.0.1/tcp/9876/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6a
 
 This JS peer will fire off a hello message every few seconds, which the other two subscribing nodes can see.
 
-If you return to the second terminal and type a message, the bootstrapper and JS peers will both print that message.
+**Fourth terminal**:  Createa a Rust peer to connect to the bootstrap node and then subscribe and publish on the topic:
 
-In short, you have a chat app on a private libp2p network.
+```
+cd pubsub/rust
+cargo run /ip4/0.0.0.0/tcp/9879
+# Wait for it to start up
+/dial /ip4/127.0.0.1/tcp/9876
+# Now type any message to publish
+```
+
+The Rust peer listens on the CLI-specified port (9879 in the above example), and then the `/dial` command causes it to dial out to the boostrap host.  (TODO:  rust-libp2p#471)  It is now subscribed to the same topic as the other peers.
+
+If you return to the second, third or fourth terminals and type a message, the bootstrapper and the other 2 peers will all print your message.
+
+In short, you have a chat app on a private libp2p network using PubSub.
 
 _Acknowledgements:  @jhiesey for DHT (content & peer routing) JS+Go interop, @stebalien for PubSub_

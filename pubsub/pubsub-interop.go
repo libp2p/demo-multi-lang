@@ -24,7 +24,8 @@ var ho host.Host
 
 //var dhtPtr *dht.IpfsDHT
 
-var TopicName string = "libp2p-demo-chat"
+//var TopicName string = "libp2p-demo-chat"
+var TopicName string = "RDEpsjSPrAZF9JCK5REt3tao"
 
 func parseArgs() (bool, string) {
 	usage := fmt.Sprintf("Usage: %s [-b] [PRIVATE_KEY]\n\n-b is bootstrap mode (creates DHT)\nPRIVATE_KEY is the path to a private key like '../util/private_key.bin'\n", os.Args[0])
@@ -161,8 +162,16 @@ func main() {
 		}
 	}()
 
-	host.Network().SetConnHandler(handleConn)
-
+	// SetConnHandler() should not normally be called.  Instead,
+	// use Notify() and pass it a functioon.
+	// The problem with SetConnHandler() is that it takes control
+	// of the connection.
+	//host.Network().SetConnHandler(handleConn)
+	host.Network().Notify(&inet.NotifyBundle{
+		ConnectedF: func(n inet.Network, c inet.Conn) {
+			fmt.Println("Got a connection:", c.RemotePeer())
+		},
+	})
 	if bBootstrap {
 		fmt.Println("Bootstrapper running.  Ctrl+C to exit.")
 		for true {
