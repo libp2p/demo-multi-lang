@@ -4,7 +4,7 @@
 
 **Directory**:  `content-dht-provide-find`
 
-**What it demonstrates:**  A new DHT is created by the Go program `dht-interop`.  In a separate terminal or machine, a Node.js program connects to this DHT.  One connected, each verifies that it can find the other's content via the DHT.
+**What it demonstrates:**  A new DHT is created by the Go program `dht-interop`.  In a separate terminal or machine, a Node.js program connects to this DHT.  Once connected, each verifies that it can find the other's content via the DHT.
 
 **First terminal:**
 ```
@@ -34,7 +34,7 @@ node js-dht-test/index.js /ip4/127.0.0.1/tcp/5555/ipfs/QmehVYruznbyDZuHBV4vEHESp
 
 **What it demonstrates**:  Two Go peers, one JS peer, and one Rust peer are all created and run a chat server using a shared PubSub topic.  Typing text in any peer sends it to all the other peers.
 
-**Quick test**:  `cd pubsub` and then run `./test/test.sh`.  Requires Terminator (eg, `sudo apt-get install terminator`).  The rest of this section describes how to test manually.
+**Quick test**:  `cd pubsub`, run `make` and then run `./test/test.sh`.  Requires Terminator (eg, `sudo apt-get install terminator`).  The rest of this section describes how to test manually.
 
 (**TODO**:  eliminate centralized bootstrapper; any peer should be able to bootstrap from any other peer and peers should be able to start in any order)
 
@@ -47,7 +47,7 @@ cd pubsub
 
 The bootstrapper creates a new libp2p node, subscribes to the shared topic string, spawns a go routine to emit any publishes to that topic, and then waits forever.
 
-**Second terminal**:  Create a go peer to connect to bootstrapper and publish on the topic
+**Second terminal**:  Create a go peer to connect to the bootstrapper and publish on the topic:
 
 ```
 cd pubsub
@@ -56,7 +56,7 @@ cd pubsub
 
 This peer, which is not in bootstrapper mode, creates a node, subscribes to the shared topic string, spawns the same go routine, and then loops forever requesting user input and publishing each line to the topic.
 
-**Third terminal**:  Create a JS peer to connect to bootstrap and publish on topic
+**Third terminal**:  Create a JS peer to connect to the bootstrap and publish on the topic:
 ```
 cd pubsub/js
 npm install  # first time only
