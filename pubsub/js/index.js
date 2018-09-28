@@ -11,6 +11,7 @@ const KadDHT = require('libp2p-kad-dht')
 const defaultsDeep = require('@nodeutils/defaults-deep')
 const waterfall = require('async/waterfall')
 const parallel = require('async/parallel')
+const readline = require('readline');
 
 // "RDE...tao" is the hash of "libp2p-chat-demo" (for compat with Rust)
 const topicName = "RDEpsjSPrAZF9JCK5REt3tao"
@@ -66,20 +67,23 @@ waterfall([
     fsub.subscribe(topicName)
 
     node.dial(bootstrapAddr, cb)
-  }
+  },
 ], (err) => {
   if (err) {
     console.log('Error:', err)
     throw err
   }
-  console.log("Connected to:", bootstrapAddr)
-  setInterval(pubsubloop, 3000);
+
+  console.log("Connected to: ", bootstrapAddr)
+
+  var rl = readline.createInterface(process.stdin, process.stdout);
+  rl.setPrompt('');
+  rl.prompt();
+  rl.on('line', function(line) {
+        fsub.publish(topicName, line)
+        rl.prompt();
+  }).on('close',function(){
+        process.exit(0);
+  })
+
 })
-
-
-let i = 0
-function pubsubloop() {
-  i = i + 1
-  var s = new Buffer('Hello from JS (' + i + ')')
-  fsub.publish(topicName, s)
-}
