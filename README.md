@@ -78,4 +78,30 @@ If you return to the second, third or fourth terminals and type a message, the b
 
 In short, you have a chat app on a private libp2p network using PubSub.
 
+## Debugging Notes
+
+**JS** To see debug messages from the Node.js program, use the `DEBUG` environment variable:
+```
+DEBUG="libp2p:floodsub*,libp2p:switch*,mss:*" node index.js [args...]
+```
+
+**Go** To see debug messages in Go programs, do this at runtime:
+```
+IPFS_LOGGING=debug ./pubsub-interop [args...]
+```
+
+TODO:  describe custom instrumenting the local go code
+
+If you instrument your go code with custom `fmt.Println`'s, then revert back like this:
+```
+cd $GOPATH
+go get -u ./...
+```
+
+Other useful commands:
+```
+go get -u github.com/libp2p/go-libp2p-kad-dht   # fetch just Kad DHT repo
+```
+
+
 _Acknowledgements:  @jhiesey for DHT (content & peer routing) JS+Go interop, @stebalien for PubSub_
