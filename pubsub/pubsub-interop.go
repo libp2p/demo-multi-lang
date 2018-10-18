@@ -8,7 +8,6 @@ import (
 	"os"
 	_ "time"
 
-	//	ipfsaddr "github.com/ipfs/go-ipfs-addr"
 	libp2p "github.com/libp2p/go-libp2p"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
@@ -45,7 +44,7 @@ func parseArgs() (bool, string) {
 func handleConn(conn inet.Conn) {
 	ctx := context.Background()
 	h := ho
-	fmt.Printf("<NOTICE> Got connection from %v\n", conn.RemoteMultiaddr().String())
+	fmt.Printf("<NOTICE> New peer joined: %v\n", conn.RemoteMultiaddr().String())
 	_ = h
 	_ = ctx
 }
@@ -60,7 +59,7 @@ func main() {
 	} else {
 		fmt.Printf("peer mode (port 6000)")
 	}
-	fmt.Printf(" with private key '%s'\n", privKeyFilePath)
+	fmt.Printf("\nPrivate key '%s'\n", privKeyFilePath)
 
 	//
 	// Read the private key and unmarshall it into struct
@@ -166,12 +165,11 @@ func main() {
 		},
 	})
 	if bBootstrap {
-		fmt.Println("Bootstrapper running.\nDHT running.\nCtrl+C to exit and destroy DHT.")
+		fmt.Println("Bootstrapper running.\nPubSub object instantiated using FloodSubRouter.\nCtrl+C to exit.")
 		for true {
 		}
 	} else {
 		// Now, wait for input from the user, and send that out!
-		fmt.Println("Type something and hit enter to send to other subscribers:")
 		scan := bufio.NewScanner(os.Stdin)
 		for scan.Scan() {
 			if err := fsub.Publish(TopicName, scan.Bytes()); err != nil {

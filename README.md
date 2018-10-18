@@ -59,6 +59,7 @@ cd pubsub
 This peer, which is not in bootstrapper mode, creates a node, subscribes to the shared topic string, spawns the same go routine, and then loops forever requesting user input and publishing each line to the topic.
 
 **Third terminal**:  Create a JS peer to connect to bootstrap and publish on topic
+
 ```
 cd pubsub/js
 npm install  # first time only
