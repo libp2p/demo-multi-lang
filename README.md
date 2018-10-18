@@ -1,6 +1,6 @@
 # libp2p Demos
 
-## Demo 1:  DHT Peer & Content with Go and JS Nodes
+## Demo 1:  DHT for Connecting Peers & Sharing Content (Go and JS nodes)
 
 **Directory**:  `content-dht-provide-find`
 
@@ -63,9 +63,11 @@ npm install  # first time only
 node index.js /ip4/127.0.0.1/tcp/5555/ipfs/QmehVYruznbyDZuHBV4vEHESpDevMoAovET6aJ9oRuEzWa
 ```
 
-This JS peer will fire off a hello message every few seconds, which the other two subscribing nodes can see.
+This JS peer will accept lines of text typed on stdin, and publish them on the PubSub topic.
 
-**Fourth terminal**:  Createa a Rust peer to connect to the bootstrap node and then subscribe and publish on the topic:
+(**TODO**:  JS peer should listen for connections on 6001 from new peers)
+
+**Fourth terminal**:  Creates a Rust peer to connect to the bootstrap node and then subscribe and publish on the topic:
 
 ```
 cd pubsub/rust
@@ -76,7 +78,9 @@ The Rust peer starts up, listens on port 6002, and then dials the boostrap peer.
 
 If you return to the second, third or fourth terminals and type a message, the bootstrapper and the other 2 peers will all print your message.
 
-In short, you have a chat app on a private libp2p network using PubSub.
+**Conclusion**
+
+You now have a chat app on a private libp2p network where each node can exchange messages using PubSub.
 
 ## Debugging Notes
 
@@ -90,7 +94,7 @@ DEBUG="libp2p:floodsub*,libp2p:switch*,mss:*" node index.js [args...]
 IPFS_LOGGING=debug ./pubsub-interop [args...]
 ```
 
-TODO:  describe custom instrumenting the local go code
+(**TODO**:  describe custom instrumenting the local go code for complex debugging)
 
 If you instrument your go code with custom `fmt.Println`'s, then revert back like this:
 ```
