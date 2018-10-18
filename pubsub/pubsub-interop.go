@@ -27,7 +27,7 @@ var ho host.Host
 var TopicName string = "RDEpsjSPrAZF9JCK5REt3tao"
 
 func parseArgs() (bool, string) {
-	usage := fmt.Sprintf("Usage: %s [-b] [PRIVATE_KEY]\n\n-b is bootstrap mode (creates DHT)\nPRIVATE_KEY is the path to a private key like '../util/private_key.bin'\n", os.Args[0])
+	usage := fmt.Sprintf("Usage: %s PRIVATE_KEY [--bootstrapper]\n\nPRIVATE_KEY is the path to a private key like '../util/private_key.bin'\n--bootstrapper to run in bootstrap mode (creates a DHT and listens for peers)\n", os.Args[0])
 	var bBootstrap bool = false
 	var privKeyFilePath string
 	var args []string = os.Args[1:]
@@ -35,11 +35,10 @@ func parseArgs() (bool, string) {
 		fmt.Printf("Error: wrong number of arguments\n\n%s", usage)
 		os.Exit(1)
 	}
-	if args[0] == "-b" {
-		bBootstrap = true
-		args = args[1:]
-	}
 	privKeyFilePath = args[0]
+	if (len(args) == 2) && (args[1] == "--bootstrapper") {
+		bBootstrap = true
+	}
 	return bBootstrap, privKeyFilePath
 }
 
