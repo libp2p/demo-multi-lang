@@ -166,7 +166,7 @@ func main() {
 		},
 	})
 	if bBootstrap {
-		fmt.Println("Bootstrapper running.  Ctrl+C to exit.")
+		fmt.Println("Bootstrapper running.\nDHT running.\nCtrl+C to exit and destroy DHT.")
 		for true {
 		}
 	} else {
