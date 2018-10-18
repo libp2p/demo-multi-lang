@@ -22,9 +22,8 @@ import (
 
 var ho host.Host
 
-//var dhtPtr *dht.IpfsDHT
-
 //var TopicName string = "libp2p-demo-chat"
+//h("libp2p-demo-chat") = "RDEpsjSPrAZF9JCK5REt3tao" - rust uses the hash unlike js/go ()
 var TopicName string = "RDEpsjSPrAZF9JCK5REt3tao"
 
 func parseArgs() (bool, string) {
@@ -65,7 +64,7 @@ func main() {
 	fmt.Printf(" with private key '%s'\n", privKeyFilePath)
 
 	//
-	// Read the private key
+	// Read the private key and unmarshall it into struct
 	//
 	var privBytes []byte
 	privBytes, err := ioutil.ReadFile(privKeyFilePath)
@@ -101,10 +100,6 @@ func main() {
 		panic(err)
 	}
 
-	//	ho = host
-	//fmt.Printf("To connect, run:\n")
-	//fmt.Printf("node js-dht-test/index.js %s/ipfs/%s\n", host.Addrs()[0], host.ID().Pretty())
-
 	//
 	// Construct a floodsub instance for this host
 	//
@@ -115,7 +110,7 @@ func main() {
 	}
 
 	//
-	// If we are the bootstrap node, don't try to connec to any peers.
+	// If we are the bootstrap node, we don't try to connect to any peers.
 	// Else:  try to connect to the bootstrap node.
 	//
 	const bootstrapAddrIP4Str string = "127.0.0.1"
@@ -164,10 +159,8 @@ func main() {
 	}()
 
 	// SetConnHandler() should not normally be called.  Instead,
-	// use Notify() and pass it a functioon.
-	// The problem with SetConnHandler() is that it takes control
-	// of the connection.
-	//host.Network().SetConnHandler(handleConn)
+	// use Notify() and pass it a functioon. (The problem with
+	// SetConnHandler() is that it takes control of the connection.)
 	host.Network().Notify(&inet.NotifyBundle{
 		ConnectedF: func(n inet.Network, c inet.Conn) {
 			fmt.Println("Got a connection:", c.RemotePeer())
@@ -187,14 +180,4 @@ func main() {
 			}
 		}
 	}
-	// 	//
-	// 	// Construct a DHT for peer discovery if we are the bootstrap node.
-	// 	// Else:  construct a DHT client for peer discovery and connect to bootstrap node.
-	// 	//
-	// 	d, err := dht.New(ctx, host, dhtopts.Client(false))
-	// 	if err != nil {
-	// 		panic(err)
-	//	}
-
-	//	dhtPtr = d
 }

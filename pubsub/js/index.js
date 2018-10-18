@@ -13,7 +13,8 @@ const waterfall = require('async/waterfall')
 const parallel = require('async/parallel')
 const readline = require('readline');
 
-// "RDE...tao" is the hash of "libp2p-chat-demo" (for compat with Rust)
+// h("libp2p-chat-demo") = "RDEpsjSPrAZF9JCK5REt3tao" which we use here
+// (this is a temporary hack for compat with Rust; see libp2p/rust-libp2p #473)
 const topicName = "RDEpsjSPrAZF9JCK5REt3tao"
 
 class MyBundle extends libp2p {
