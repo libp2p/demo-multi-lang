@@ -60,7 +60,6 @@ fn main() {
         fn on_floodsub<TTopology>(&mut self, message: <libp2p::floodsub::Floodsub<TSubstream> as libp2p::core::swarm::NetworkBehaviour<TTopology>>::OutEvent)
         where TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite
         {
-            dbg!(message.clone());
             println!("{:?}: {}", &message.source,String::from_utf8_lossy(&message.data));
         }
     }
@@ -86,7 +85,8 @@ fn main() {
         0u16
     };
 
-    libp2p::Swarm::listen_on(&mut swarm, multiaddr![Ip4([0, 0, 0, 0]), Tcp(port)]).unwrap();
+    let address = libp2p::Swarm::listen_on(&mut swarm, multiaddr![Ip4([0, 0, 0, 0]), Tcp(port)]).unwrap();
+    println!("Now listening on {:?}", address);
 
     // Read full lines from stdin
     println!("Type your message to send to remote hosts:");
@@ -99,6 +99,7 @@ fn main() {
             match framed_stdin.poll().expect("Error while polling stdin") {
                 Async::Ready(Some(line)) => {
                     let to_send = format!("{}", line);
+                    println!("sending: {}", line);
                     swarm.floodsub.publish(&floodsub_topic, to_send.as_bytes())
                 },
                 Async::Ready(None) => break, // Stdin closed
