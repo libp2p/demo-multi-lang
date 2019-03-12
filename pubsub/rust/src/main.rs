@@ -17,139 +17,104 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
-
-extern crate bytes;
-extern crate env_logger;
-extern crate futures;
-extern crate libp2p;
-extern crate rand;
-extern crate tokio_current_thread;
-extern crate tokio_io;
-extern crate tokio_stdin;
-
-use futures::Stream;
-use futures::future::Future;
-use std::{env, mem};
-use libp2p::core::{either::EitherOutput, upgrade};
-use libp2p::core::{Multiaddr, Transport, PublicKey};
-use libp2p::peerstore::PeerId;
-use libp2p::tcp::TcpConfig;
-use libp2p::websocket::WsConfig;
+use futures::prelude::*;
+use libp2p::{
+    NetworkBehaviour, Transport,
+    core::upgrade::{self, OutboundUpgradeExt},
+    secio,
+    mplex,
+    multiaddr,
+    tokio_codec::{FramedRead, LinesCodec}
+};
+use std::env;
 
 fn main() {
-    env_logger::init();
 
-    // Address to listen on
-    let listen_addr:String = "/ip4/0.0.0.0/tcp/6002".to_owned();
+    // Create a random PeerId
+    let local_key = secio::SecioKeyPair::ed25519_generated().unwrap();
+    let local_pub_key = local_key.to_public_key();
 
-    // We start by creating a `TcpConfig` that indicates that we want TCP/IP.
-    let transport = TcpConfig::new()
-        // In addition to TCP/IP, we also want to support the Websockets protocol on top of TCP/IP.
-        // The parameter passed to `WsConfig::new()` must be an implementation of `Transport` to be
-        // used for the underlying multiaddress.
-        .or_transport(WsConfig::new(TcpConfig::new()))
+    // Set up a an encrypted DNS-enabled TCP Transport over the Mplex protocol
+    let transport = libp2p::CommonTransport::new()
+        .with_upgrade(secio::SecioConfig::new(local_key))
+        .and_then(move |out, _| {
+            let peer_id = out.remote_key.into_peer_id();
+            let upgrade = mplex::MplexConfig::new().map_outbound(move |muxer| (peer_id, muxer) );
+            upgrade::apply_outbound(out.stream, upgrade).map_err(|e| e.into_io_error())
+        });
 
-        // On top of TCP/IP, we will use either the plaintext protocol or the secio protocol,
-        // depending on which one the remote supports.
-        .with_upgrade({
-            let plain_text = upgrade::PlainTextConfig;
+    // Create a Floodsub topic
+    let floodsub_topic = libp2p::floodsub::TopicBuilder::new("libp2p-demo-chat").build();
 
-            let secio = {
-                let private_key = include_bytes!("test-rsa-private-key.pk8");
-                let public_key = include_bytes!("test-rsa-public-key.der").to_vec();
-                libp2p::secio::SecioConfig::new(
-                    libp2p::secio::SecioKeyPair::rsa_from_pkcs8(private_key, public_key).unwrap()
-                )
-            };
+    // We create a custom network behaviour that combines floodsub and mDNS.
+    // In the future, we want to improve libp2p to make this easier to do.
+    #[derive(NetworkBehaviour)]
+    struct MyBehaviour<TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite> {
+        #[behaviour(handler = "on_floodsub")]
+        floodsub: libp2p::floodsub::Floodsub<TSubstream>,
+        mdns: libp2p::mdns::Mdns<TSubstream>,
+    }
 
-            upgrade::or(
-                upgrade::map(plain_text, |pt| EitherOutput::First(pt)),
-                upgrade::map(secio, |out: libp2p::secio::SecioOutput<_>| EitherOutput::Second(out.stream))
-            )
-        })
+    impl<TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite> MyBehaviour<TSubstream> {
+        // Called when `floodsub` produces an event.
+        fn on_floodsub<TTopology>(&mut self, message: <libp2p::floodsub::Floodsub<TSubstream> as libp2p::core::swarm::NetworkBehaviour<TTopology>>::OutEvent)
+        where TSubstream: libp2p::tokio_io::AsyncRead + libp2p::tokio_io::AsyncWrite
+        {
+            println!("{:?}: {}", &message.source,String::from_utf8_lossy(&message.data));
+        }
+    }
 
-        // On top of plaintext or secio, we will use the multiplex protocol.
-        .with_upgrade(libp2p::mplex::MplexConfig::new())
-        // The object returned by the call to `with_upgrade(MplexConfig::new())` can't be used as a
-        // `Transport` because the output of the upgrade is not a stream but a controller for
-        // muxing. We have to explicitly call `into_connection_reuse()` in order to turn this into
-        // a `Transport`.
-        .map(|val, _| ((), val))
-        .into_connection_reuse()
-        .map(|((), val), _| val);
+    // Create a Swarm to manage peers and events
+    let mut swarm = {
+        let mut behaviour = MyBehaviour {
+            floodsub: libp2p::floodsub::Floodsub::new(local_pub_key.clone().into_peer_id()),
+            mdns: libp2p::mdns::Mdns::new().expect("Failed to create mDNS service"),
+        };
 
-    // We now have a `transport` variable that can be used either to dial nodes or listen to
-    // incoming connections, and that will automatically apply secio and multiplex on top
-    // of any opened stream.
-
-    // We now prepare the protocol that we are going to negotiate with nodes that open a connection
-    // or substream to our server.
-    let my_id = {
-        let key = (0..2048).map(|_| rand::random::<u8>()).collect::<Vec<_>>();
-        PeerId::from_public_key(PublicKey::Rsa(key))
+        behaviour.floodsub.subscribe(floodsub_topic.clone());
+        libp2p::Swarm::new(transport, behaviour, libp2p::core::topology::MemoryTopology::empty(), local_pub_key)
     };
 
-    let (floodsub_upgrade, floodsub_rx) = libp2p::floodsub::FloodSubUpgrade::new(my_id);
+    // We dial a bootstrap node for the nodes outside of the reach of mDNS.
+    libp2p::Swarm::dial_addr(&mut swarm, "/ip4/127.0.0.1/tcp/5555".parse().unwrap()).unwrap();
 
-    // Let's put this `transport` into a *swarm*. The swarm will handle all the incoming and
-    // outgoing connections for us.
-    let (swarm_controller, swarm_future) = libp2p::core::swarm(
-        transport.clone().with_upgrade(floodsub_upgrade.clone()),
-        |socket, _| {
-            println!("Successfully negotiated protocol");
-            socket
-        },
-    );
+    // Listen on all interfaces.
+    let port = if let Some(port) = env::args().nth(1) {
+        port.parse().expect("Failed to parse port number")
+    } else {
+        0u16
+    };
 
-    let address = swarm_controller
-        .listen_on(listen_addr.parse().expect("invalid multiaddr"))
-        .expect("unsupported multiaddr");
+    let address = libp2p::Swarm::listen_on(&mut swarm, multiaddr![Ip4([0, 0, 0, 0]), Tcp(port)]).unwrap();
     println!("Now listening on {:?}", address);
 
-    let topic = libp2p::floodsub::TopicBuilder::new("libp2p-demo-chat").build();
+    // Read full lines from stdin
+    println!("Type your message to send to remote hosts:");
+    let stdin = tokio_stdin_stdout::stdin(0);
+    let mut framed_stdin = FramedRead::new(stdin, LinesCodec::new()).fuse();
 
-    let floodsub_ctl = libp2p::floodsub::FloodSubController::new(&floodsub_upgrade);
-    floodsub_ctl.subscribe(&topic);
-
-    let floodsub_rx = floodsub_rx.for_each(|msg| {
-        if let Ok(msg) = String::from_utf8(msg.data) {
-            println!("< {}", msg);
+    // Kick it off
+    tokio::run(futures::future::poll_fn(move || -> Result<_, ()> {
+        loop {
+            match framed_stdin.poll().expect("Error while polling stdin") {
+                Async::Ready(Some(line)) => {
+                    let to_send = format!("{}", line);
+                    println!("sending: {}", line);
+                    swarm.floodsub.publish(&floodsub_topic, to_send.as_bytes())
+                },
+                Async::Ready(None) => break, // Stdin closed
+                Async::NotReady => break,
+            };
         }
-        Ok(())
-    });
 
-    let m:String = "/ip4/127.0.0.1/tcp/5555".to_owned();
-    let target: Multiaddr = m.parse().unwrap();
-    println!("Dialing bootstrap peer {}", target);
-    swarm_controller
-        .dial(
-             target,
-             transport.clone().with_upgrade(floodsub_upgrade.clone()),
-        )
-        .unwrap();
-
-    let stdin = {
-        let mut buffer = Vec::new();
-        tokio_stdin::spawn_stdin_stream_unbounded().for_each(move |msg| {
-            if msg != b'\r' && msg != b'\n' {
-                buffer.push(msg);
-                return Ok(());
-            } else if buffer.is_empty() {
-                return Ok(());
+        loop {
+            match swarm.poll().expect("Error while polling swarm") {
+                Async::Ready(Some(_)) => {
+                },
+                Async::Ready(None) | Async::NotReady => break,
             }
-            let msg = String::from_utf8(mem::replace(&mut buffer, Vec::new())).unwrap();
-            floodsub_ctl.publish(&topic, msg.into_bytes());
-            Ok(())
-        })
-    };
+        }
 
-    let final_fut = swarm_future
-        .for_each(|_| Ok(()))
-        .select(floodsub_rx)
-        .map(|_| ())
-        .map_err(|e| e.0)
-        .select(stdin.map_err(|_| unreachable!()))
-        .map(|_| ())
-        .map_err(|e| e.0);
-    tokio_current_thread::block_on_all(final_fut).unwrap();
+        Ok(Async::NotReady)
+    }));
 }
