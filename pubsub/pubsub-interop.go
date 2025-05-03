@@ -166,8 +166,7 @@ func main() {
 	})
 	if bBootstrap {
 		fmt.Println("Bootstrapper running.\nPubSub object instantiated using FloodSubRouter.\nCtrl+C to exit.")
-		for true {
-		}
+		select {}
 	} else {
 		// Now, wait for input from the user, and send that out!
 		scan := bufio.NewScanner(os.Stdin)
